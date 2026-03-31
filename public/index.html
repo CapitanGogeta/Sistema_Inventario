@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario Hildemar</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Navigation (hidden by default, shown when logged in) -->
+    <nav id="main-nav" class="hidden">
+        <div class="nav-brand">
+            <span class="nav-logo">&#128230;</span>
+            <span class="nav-title">Hildemar</span>
+        </div>
+        <div class="nav-links">
+            <a href="#/dashboard" class="nav-link">Dashboard</a>
+            <a href="#/categorias" class="nav-link">Categorías</a>
+            <a href="#/proveedores" class="nav-link">Proveedores</a>
+            <a href="#/productos" class="nav-link">Productos</a>
+            <a href="#/movimientos" class="nav-link">Movimientos</a>
+            <a href="#/facturas" class="nav-link">Facturas</a>
+        </div>
+        <div class="nav-user">
+            <span id="user-info"></span>
+            <button onclick="Auth.logout()" class="btn btn-sm btn-outline">Salir</button>
+        </div>
+    </nav>
+
+    <!-- Main content area -->
+    <main id="app-content">
+        <!-- Views render here -->
+    </main>
+
+    <!-- Scripts (order matters) -->
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/views/login.js"></script>
+    <script src="js/views/dashboard.js"></script>
+    <script src="js/views/categorias.js"></script>
+    <script src="js/views/proveedores.js"></script>
+    <script src="js/views/productos.js"></script>
+    <script src="js/views/movimientos.js"></script>
+    <script src="js/views/facturas.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
