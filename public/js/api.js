@@ -133,5 +133,14 @@ const api = {
     },
     getFactura: (id) => apiFetch(`/facturas/${id}`),
     uploadFactura: (formData) =>
-        apiFetch('/facturas', { method: 'POST', body: formData })
+        apiFetch('/facturas', { method: 'POST', body: formData }),
+
+    // Usuarios
+    getUsers: () => apiFetch('/auth/users'),
+    registerUser: (data) =>
+        apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+    updateUser: (id, data) =>
+        apiFetch(`/auth/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    deleteUser: (id) =>
+        apiFetch(`/auth/users/${id}`, { method: 'DELETE' })
 };

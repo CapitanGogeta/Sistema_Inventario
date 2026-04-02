@@ -9,7 +9,8 @@ const App = {
         '/proveedores': { view: Proveedores, auth: true, admin: true },
         '/productos': { view: Productos, auth: true, admin: true },
         '/movimientos': { view: Movimientos, auth: true, admin: true },
-        '/facturas': { view: Facturas, auth: true, admin: true }
+        '/facturas': { view: Facturas, auth: true, admin: true },
+        '/usuarios': { view: Usuarios, auth: true, admin: true }
     },
 
     // Initialize the app
