@@ -65,12 +65,12 @@ const Categorias = {
                     ${this.data.map(c => `
                         <tr>
                             <td>${c.id}</td>
-                            <td><strong>${c.nombre}</strong></td>
-                            <td>${c.descripcion || '-'}</td>
+                            <td><strong>${escapeHtml(c.nombre)}</strong></td>
+                            <td>${escapeHtml(c.descripcion)}</td>
                             <td class="text-right">
                                 <div class="actions" style="justify-content:flex-end">
                                     <button class="btn btn-sm btn-outline" onclick="Categorias.openModal(${c.id})">Editar</button>
-                                    <button class="btn btn-sm btn-danger" onclick="Categorias.delete(${c.id}, '${c.nombre}')">Eliminar</button>
+                                    <button class="btn btn-sm btn-danger" onclick="Categorias.delete(${c.id})">Eliminar</button>
                                 </div>
                             </td>
                         </tr>
@@ -142,7 +142,9 @@ const Categorias = {
         }
     },
 
-    async delete(id, nombre) {
+    async delete(id) {
+        const cat = this.data.find(c => c.id === id);
+        const nombre = cat ? cat.nombre : 'esta categoría';
         if (!confirm(`¿Eliminar la categoría "${nombre}"?`)) return;
         try {
             await api.deleteCategoria(id);

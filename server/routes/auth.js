@@ -7,8 +7,54 @@ const { registrarAuditoria } = require('../middleware/audit');
 
 const router = express.Router();
 
+// Simple rate limiting for login attempts
+const loginAttempts = new Map();
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes
+
+function checkRateLimit(ip) {
+    const now = Date.now();
+    const attempts = loginAttempts.get(ip);
+
+    if (!attempts) return { allowed: true };
+
+    // Clean expired attempts
+    const recentAttempts = attempts.filter(time => now - time < LOCKOUT_TIME);
+    loginAttempts.set(ip, recentAttempts);
+
+    if (recentAttempts.length >= MAX_ATTEMPTS) {
+        const oldestAttempt = Math.min(...recentAttempts);
+        const remainingMs = LOCKOUT_TIME - (now - oldestAttempt);
+        const remainingMin = Math.ceil(remainingMs / 60000);
+        return {
+            allowed: false,
+            remaining: remainingMin
+        };
+    }
+
+    return { allowed: true };
+}
+
+function registerFailedAttempt(ip) {
+    const attempts = loginAttempts.get(ip) || [];
+    attempts.push(Date.now());
+    loginAttempts.set(ip, attempts);
+}
+
+function clearAttempts(ip) {
+    loginAttempts.delete(ip);
+}
+
 router.post('/login', async (req, res) => {
     try {
+        // Rate limit check
+        const rateCheck = checkRateLimit(req.ip);
+        if (!rateCheck.allowed) {
+            return res.status(429).json({
+                error: `Demasiados intentos. Intente de nuevo en ${rateCheck.remaining} minutos.`
+            });
+        }
+
         const { username, password } = req.body;
 
         if (!username || !password) {
@@ -18,14 +64,19 @@ router.post('/login', async (req, res) => {
         const user = db.prepare('SELECT * FROM users WHERE username = ? AND activo = 1').get(username);
 
         if (!user) {
+            registerFailedAttempt(req.ip);
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
         const passwordValido = await bcrypt.compare(password, user.password_hash);
 
         if (!passwordValido) {
+            registerFailedAttempt(req.ip);
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
+
+        // Clear rate limit on successful login
+        clearAttempts(req.ip);
 
         const token = jwt.sign(
             { id: user.id, username: user.username, rol: user.rol, nombre: user.nombre },

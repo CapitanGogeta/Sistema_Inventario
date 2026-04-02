@@ -100,8 +100,8 @@ const Facturas = {
                     ${this.data.map(f => `
                         <tr>
                             <td>${f.fecha_factura || new Date(f.created_at).toLocaleDateString('es-AR')}</td>
-                            <td><strong>${f.numero_factura || '-'}</strong></td>
-                            <td>${f.proveedor_nombre || '-'}</td>
+                            <td><strong>${escapeHtml(f.numero_factura)}</strong></td>
+                            <td>${escapeHtml(f.proveedor_nombre)}</td>
                             <td>${f.monto_total ? '$' + f.monto_total.toLocaleString('es-AR') : '-'}</td>
                             <td>
                                 <span class="badge badge-info">${f.archivo_tipo}</span>

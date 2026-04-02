@@ -74,16 +74,16 @@ const Productos = {
                         const stockClass = p.stock_actual < p.stock_minimo ? 'badge-danger' : 'badge-success';
                         return `
                             <tr>
-                                <td><code>${p.codigo || '-'}</code></td>
-                                <td><strong>${p.nombre}</strong></td>
-                                <td>${p.categoria_nombre || '-'}</td>
+                                <td><code>${escapeHtml(p.codigo)}</code></td>
+                                <td><strong>${escapeHtml(p.nombre)}</strong></td>
+                                <td>${escapeHtml(p.categoria_nombre)}</td>
                                 <td><span class="badge ${stockClass}">${p.stock_actual}</span></td>
                                 <td>$${p.precio_compra}</td>
                                 <td><strong>$${(p.stock_actual * p.precio_compra).toLocaleString('es-AR')}</strong></td>
                                 <td class="text-right">
                                     <div class="actions" style="justify-content:flex-end">
                                         <button class="btn btn-sm btn-outline" onclick="Productos.openModal(${p.id})">Editar</button>
-                                        <button class="btn btn-sm btn-danger" onclick="Productos.delete(${p.id}, '${p.nombre}')">Eliminar</button>
+                                        <button class="btn btn-sm btn-danger" onclick="Productos.delete(${p.id}, this)">Eliminar</button>
                                     </div>
                                 </td>
                             </tr>
@@ -194,7 +194,9 @@ const Productos = {
         }
     },
 
-    async delete(id, nombre) {
+    async delete(id) {
+        const prod = this.data.find(p => p.id === id);
+        const nombre = prod ? prod.nombre : 'este producto';
         if (!confirm(`¿Eliminar el producto "${nombre}"?`)) return;
         try {
             await api.deleteProducto(id);

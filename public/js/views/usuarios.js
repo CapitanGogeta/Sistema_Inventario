@@ -73,15 +73,15 @@ const Usuarios = {
                         const estadoTexto = u.activo ? 'Activo' : 'Inactivo';
                         return `
                             <tr style="${!u.activo ? 'opacity:0.5' : ''}">
-                                <td><code>${u.username}</code>${isMe ? ' <span class="badge badge-warning" style="font-size:0.7rem">vos</span>' : ''}</td>
-                                <td><strong>${u.nombre}</strong></td>
-                                <td>${u.email || '-'}</td>
+                                <td><code>${escapeHtml(u.username)}</code>${isMe ? ' <span class="badge badge-warning" style="font-size:0.7rem">vos</span>' : ''}</td>
+                                <td><strong>${escapeHtml(u.nombre)}</strong></td>
+                                <td>${escapeHtml(u.email)}</td>
                                 <td><span class="badge ${rolBadge}">${u.rol}</span></td>
                                 <td><span class="badge ${estadoBadge}">${estadoTexto}</span></td>
                                 <td class="text-right">
                                     <div class="actions" style="justify-content:flex-end">
                                         <button class="btn btn-sm btn-outline" onclick="Usuarios.openModal(${u.id})">Editar</button>
-                                        ${!isMe ? `<button class="btn btn-sm btn-danger" onclick="Usuarios.delete(${u.id}, '${u.nombre}')">${u.activo ? 'Desactivar' : 'Activar'}</button>` : ''}
+                                        ${!isMe ? `<button class="btn btn-sm btn-danger" onclick="Usuarios.toggleActive(${u.id})">${u.activo ? 'Desactivar' : 'Activar'}</button>` : ''}
                                     </div>
                                 </td>
                             </tr>
@@ -186,10 +186,11 @@ const Usuarios = {
         }
     },
 
-    async delete(id, nombre) {
+    async toggleActive(id) {
         const user = this.data.find(u => u.id === id);
+        if (!user) return;
         const action = user.activo ? 'desactivar' : 'activar';
-        if (!confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} al usuario "${nombre}"?`)) return;
+        if (!confirm(`¿${action.charAt(0).toUpperCase() + action.slice(1)} al usuario "${user.nombre}"?`)) return;
         try {
             await api.updateUser(id, { activo: user.activo ? 0 : 1 });
             await this.load();

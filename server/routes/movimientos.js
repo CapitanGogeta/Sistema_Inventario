@@ -52,13 +52,12 @@ router.get('/', authMiddleware, (req, res) => {
             params.push(hasta);
         }
 
-        // Orden y límite
+        // Orden y límite (paginación por defecto: 200)
         sql += ' ORDER BY m.created_at DESC';
 
-        if (limit) {
-            sql += ' LIMIT ?';
-            params.push(parseInt(limit));
-        }
+        const limitNum = limit ? parseInt(limit) : 200;
+        sql += ' LIMIT ?';
+        params.push(limitNum);
 
         const movimientos = db.prepare(sql).all(...params);
 

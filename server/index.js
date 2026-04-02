@@ -1,14 +1,24 @@
 const express = require('express');
 const path = require('path');
 const dotenv = require('dotenv');
+const { authMiddleware } = require('./middleware/auth');
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Security headers
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.removeHeader('X-Powered-By');
+    next();
+});
+
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Serve static files from public/ (before API routes)
 app.use(express.static(path.join(__dirname, '..', 'public')));
@@ -21,7 +31,7 @@ app.use('/api/productos', require('./routes/productos'));
 app.use('/api/movimientos', require('./routes/movimientos'));
 app.use('/api/facturas', require('./routes/facturas'));
 
-app.get('/db-test', (req, res) => {
+app.get('/db-test', authMiddleware, (req, res) => {
     try {
         const db = require('./database/db');
         const result = db.prepare('SELECT 1 as test').get();

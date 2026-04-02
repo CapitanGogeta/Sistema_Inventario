@@ -105,10 +105,10 @@ const Movimientos = {
                         return `
                             <tr>
                                 <td>${new Date(m.created_at).toLocaleString('es-AR')}</td>
-                                <td><strong>${m.producto_nombre || '-'}</strong><br><code>${m.producto_codigo || ''}</code></td>
+                                <td><strong>${escapeHtml(m.producto_nombre)}</strong><br><code>${escapeHtml(m.producto_codigo)}</code></td>
                                 <td><span class="badge ${badgeClass}">${m.tipo}</span></td>
                                 <td><strong>${sign}${m.cantidad}</strong></td>
-                                <td>${m.motivo || '-'}</td>
+                                <td>${escapeHtml(m.motivo)}</td>
                                 <td>
                                     ${m.notas ? `<button class="btn btn-sm btn-outline" onclick="Movimientos.openDetail(${m.id})">&#128196; Ver</button>` : '<span style="color:var(--gray-300)">-</span>'}
                                 </td>
@@ -216,7 +216,7 @@ const Movimientos = {
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
                         <div>
                             <div class="form-label">Producto</div>
-                            <div><strong>${m.producto_nombre || '-'}</strong> <code>(${m.producto_codigo || 'sin código'})</code></div>
+                            <div><strong>${escapeHtml(m.producto_nombre)}</strong> <code>(${escapeHtml(m.producto_codigo)})</code></div>
                         </div>
                         <div>
                             <div class="form-label">Tipo</div>
@@ -232,7 +232,7 @@ const Movimientos = {
                         </div>
                         <div>
                             <div class="form-label">Motivo</div>
-                            <div>${m.motivo || '<span style="color:var(--gray-400)">Sin motivo</span>'}</div>
+                            <div>${escapeHtml(m.motivo) || '<span style="color:var(--gray-400)">Sin motivo</span>'}</div>
                         </div>
                         <div>
                             <div class="form-label">Registrado por</div>
@@ -242,7 +242,7 @@ const Movimientos = {
                     ${m.notas ? `
                         <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:16px">
                             <div class="form-label" style="margin-bottom:8px">&#128221; Notas</div>
-                            <div style="white-space:pre-wrap;line-height:1.6">${m.notas}</div>
+                            <div style="white-space:pre-wrap;line-height:1.6">${escapeHtml(m.notas)}</div>
                         </div>
                     ` : ''}
                     <div class="modal-footer">

@@ -3,6 +3,17 @@
 
 const API_BASE = '/api';
 
+// Escape HTML to prevent XSS attacks
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // Get token from localStorage
 function getToken() {
     return localStorage.getItem('token');
@@ -62,7 +73,13 @@ async function apiFetch(endpoint, options = {}) {
         headers
     });
 
-    const data = await response.json();
+    // Try to parse JSON, fallback to error message
+    let data;
+    try {
+        data = await response.json();
+    } catch (e) {
+        throw new Error('Error de conexión con el servidor');
+    }
 
     // If unauthorized, redirect to login
     if (response.status === 401) {

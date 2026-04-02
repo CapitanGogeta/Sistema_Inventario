@@ -67,14 +67,14 @@ const Proveedores = {
                     ${this.data.map(p => `
                         <tr>
                             <td>${p.id}</td>
-                            <td><strong>${p.nombre}</strong></td>
-                            <td>${p.contacto || '-'}</td>
-                            <td>${p.telefono || '-'}</td>
-                            <td>${p.email || '-'}</td>
+                            <td><strong>${escapeHtml(p.nombre)}</strong></td>
+                            <td>${escapeHtml(p.contacto)}</td>
+                            <td>${escapeHtml(p.telefono)}</td>
+                            <td>${escapeHtml(p.email)}</td>
                             <td class="text-right">
                                 <div class="actions" style="justify-content:flex-end">
                                     <button class="btn btn-sm btn-outline" onclick="Proveedores.openModal(${p.id})">Editar</button>
-                                    <button class="btn btn-sm btn-danger" onclick="Proveedores.delete(${p.id}, '${p.nombre}')">Eliminar</button>
+                                    <button class="btn btn-sm btn-danger" onclick="Proveedores.delete(${p.id})">Eliminar</button>
                                 </div>
                             </td>
                         </tr>
@@ -163,7 +163,9 @@ const Proveedores = {
         }
     },
 
-    async delete(id, nombre) {
+    async delete(id) {
+        const prov = this.data.find(p => p.id === id);
+        const nombre = prov ? prov.nombre : 'este proveedor';
         if (!confirm(`¿Eliminar el proveedor "${nombre}"?`)) return;
         try {
             await api.deleteProveedor(id);

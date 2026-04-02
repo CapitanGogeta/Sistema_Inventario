@@ -81,10 +81,10 @@ const Dashboard = {
                             ${movimientos.movimientos.map(m => `
                                 <tr>
                                     <td>${new Date(m.created_at).toLocaleString('es-AR')}</td>
-                                    <td>${m.producto_nombre || '-'}</td>
+                                    <td>${escapeHtml(m.producto_nombre)}</td>
                                     <td><span class="badge badge-${m.tipo === 'ENTRADA' ? 'success' : m.tipo === 'SALIDA' ? 'danger' : 'info'}">${m.tipo}</span></td>
                                     <td>${m.cantidad}</td>
-                                    <td>${m.motivo || '-'}</td>
+                                    <td>${escapeHtml(m.motivo)}</td>
                                 </tr>
                             `).join('')}
                         </tbody>

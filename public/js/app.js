@@ -75,7 +75,6 @@ const App = {
     updateNavigation() {
         const nav = document.getElementById('main-nav');
         const userInfo = document.getElementById('user-info');
-        const loginPage = document.getElementById('login-page');
 
         if (isLoggedIn()) {
             if (nav) nav.classList.remove('hidden');
@@ -83,10 +82,8 @@ const App = {
                 const user = getUser();
                 userInfo.textContent = user ? user.nombre : '';
             }
-            if (loginPage) loginPage.classList.add('hidden');
         } else {
             if (nav) nav.classList.add('hidden');
-            if (loginPage) loginPage.classList.remove('hidden');
         }
     },
 

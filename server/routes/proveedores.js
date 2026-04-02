@@ -106,7 +106,13 @@ router.patch('/:id', authMiddleware, adminOnly, (req, res) => {
 
         const updates = [];
         const values = [];
-        const antes = { ...proveedor };
+        const antes = {
+            nombre: proveedor.nombre,
+            contacto: proveedor.contacto,
+            telefono: proveedor.telefono,
+            email: proveedor.email,
+            direccion: proveedor.direccion
+        };
 
         if (nombre !== undefined) {
             updates.push('nombre = ?');
