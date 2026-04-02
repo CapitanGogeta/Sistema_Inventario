@@ -26,7 +26,35 @@ function initDatabase() {
         console.log('[DB] Schema ejecutado correctamente.');
     } else {
         console.log('[DB] Base de datos existente. Conexión establecida.');
+        migrateDatabase();
     }
+}
+
+function migrateDatabase() {
+    // Add new columns if they don't exist (for existing databases)
+    const migrations = [
+        { table: 'productos', column: 'marca', type: 'TEXT' },
+        { table: 'productos', column: 'volumen', type: 'TEXT' },
+        { table: 'productos', column: 'codigo_barras', type: 'TEXT' },
+        { table: 'productos', column: 'proveedor_id', type: 'INTEGER REFERENCES proveedores(id)' }
+    ];
+
+    migrations.forEach(m => {
+        try {
+            const columns = db.prepare(`PRAGMA table_info(${m.table})`).all().map(c => c.name);
+            if (!columns.includes(m.column)) {
+                db.exec(`ALTER TABLE ${m.table} ADD COLUMN ${m.column} ${m.type}`);
+                console.log(`[DB] Migración: agregada columna ${m.column} a ${m.table}`);
+            }
+        } catch (e) {
+            console.error(`[DB] Error en migración ${m.column}:`, e.message);
+        }
+    });
+
+    // Add index for codigo_barras if not exists
+    try {
+        db.exec('CREATE INDEX IF NOT EXISTS idx_productos_codigo_barras ON productos(codigo_barras)');
+    } catch (e) { /* ignore */ }
 }
 
 initDatabase();

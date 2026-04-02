@@ -9,9 +9,12 @@ const router = express.Router();
 router.get('/', authMiddleware, (req, res) => {
     try {
         const productos = db.prepare(`
-            SELECT p.*, c.nombre AS categoria_nombre 
+            SELECT p.*, 
+                   c.nombre AS categoria_nombre,
+                   prov.nombre AS proveedor_nombre
             FROM productos p 
-            LEFT JOIN categorias c ON p.categoria_id = c.id 
+            LEFT JOIN categorias c ON p.categoria_id = c.id
+            LEFT JOIN proveedores prov ON p.proveedor_id = prov.id
             WHERE p.activo = 1 
             ORDER BY p.nombre ASC
         `).all();
@@ -27,9 +30,12 @@ router.get('/', authMiddleware, (req, res) => {
 router.get('/:id', authMiddleware, (req, res) => {
     try {
         const producto = db.prepare(`
-            SELECT p.*, c.nombre AS categoria_nombre 
+            SELECT p.*, 
+                   c.nombre AS categoria_nombre,
+                   prov.nombre AS proveedor_nombre
             FROM productos p 
-            LEFT JOIN categorias c ON p.categoria_id = c.id 
+            LEFT JOIN categorias c ON p.categoria_id = c.id
+            LEFT JOIN proveedores prov ON p.proveedor_id = prov.id
             WHERE p.id = ? AND p.activo = 1
         `).get(req.params.id);
 
@@ -47,7 +53,7 @@ router.get('/:id', authMiddleware, (req, res) => {
 // POST /api/productos — Crear producto (admin)
 router.post('/', authMiddleware, adminOnly, (req, res) => {
     try {
-        const { codigo, nombre, descripcion, categoria_id, unidad_medida, stock_minimo, precio_compra, precio_venta } = req.body;
+        const { codigo, codigo_barras, nombre, marca, volumen, descripcion, categoria_id, proveedor_id, unidad_medida, stock_minimo, precio_compra, precio_venta } = req.body;
 
         // Validar nombre requerido
         if (!nombre || nombre.trim() === '') {
@@ -62,6 +68,14 @@ router.post('/', authMiddleware, adminOnly, (req, res) => {
             }
         }
 
+        // Validar codigo_barras duplicado (si se proporciona)
+        if (codigo_barras !== undefined && codigo_barras !== null && codigo_barras.trim() !== '') {
+            const barrasExistente = db.prepare('SELECT id FROM productos WHERE codigo_barras = ?').get(codigo_barras.trim());
+            if (barrasExistente) {
+                return res.status(409).json({ error: 'Ya existe un producto con ese código de barras' });
+            }
+        }
+
         // Validar categoria_id (si se proporciona)
         if (categoria_id !== undefined && categoria_id !== null) {
             const categoria = db.prepare('SELECT id FROM categorias WHERE id = ? AND activo = 1').get(categoria_id);
@@ -70,15 +84,27 @@ router.post('/', authMiddleware, adminOnly, (req, res) => {
             }
         }
 
+        // Validar proveedor_id (si se proporciona)
+        if (proveedor_id !== undefined && proveedor_id !== null) {
+            const proveedor = db.prepare('SELECT id FROM proveedores WHERE id = ? AND activo = 1').get(proveedor_id);
+            if (!proveedor) {
+                return res.status(400).json({ error: 'El proveedor especificado no existe o no está activo' });
+            }
+        }
+
         const stmt = db.prepare(`
-            INSERT INTO productos (codigo, nombre, descripcion, categoria_id, unidad_medida, stock_minimo, precio_compra, precio_venta) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO productos (codigo, codigo_barras, nombre, marca, volumen, descripcion, categoria_id, proveedor_id, unidad_medida, stock_minimo, precio_compra, precio_venta) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         const result = stmt.run(
             (codigo && codigo.trim() !== '') ? codigo.trim() : null,
+            (codigo_barras && codigo_barras.trim() !== '') ? codigo_barras.trim() : null,
             nombre.trim(),
+            (marca && marca.trim() !== '') ? marca.trim() : null,
+            (volumen && volumen.trim() !== '') ? volumen.trim() : null,
             descripcion || null,
             categoria_id || null,
+            proveedor_id || null,
             unidad_medida || 'unidad',
             stock_minimo || 0,
             precio_compra || 0,
@@ -91,7 +117,7 @@ router.post('/', authMiddleware, adminOnly, (req, res) => {
             'CREATE',
             'producto',
             result.lastInsertRowid,
-            { nombre: nombre.trim(), codigo: codigo || null, categoria_id: categoria_id || null },
+            { nombre: nombre.trim(), codigo: codigo || null, marca: marca || null },
             req.ip
         );
 
@@ -109,7 +135,7 @@ router.post('/', authMiddleware, adminOnly, (req, res) => {
 router.patch('/:id', authMiddleware, adminOnly, (req, res) => {
     try {
         const { id } = req.params;
-        const { codigo, nombre, descripcion, categoria_id, unidad_medida, stock_minimo, precio_compra, precio_venta, stock_actual } = req.body;
+        const { codigo, codigo_barras, nombre, marca, volumen, descripcion, categoria_id, proveedor_id, unidad_medida, stock_minimo, precio_compra, precio_venta, stock_actual } = req.body;
 
         // REGLA DE NEGOCIO: rechazar stock_actual explícitamente
         if (stock_actual !== undefined) {
@@ -123,7 +149,7 @@ router.patch('/:id', authMiddleware, adminOnly, (req, res) => {
         }
 
         // Validar que hay campos para actualizar
-        const camposPermitidos = { codigo, nombre, descripcion, categoria_id, unidad_medida, stock_minimo, precio_compra, precio_venta };
+        const camposPermitidos = { codigo, codigo_barras, nombre, marca, volumen, descripcion, categoria_id, proveedor_id, unidad_medida, stock_minimo, precio_compra, precio_venta };
         const camposRecibidos = Object.keys(camposPermitidos).filter(k => camposPermitidos[k] !== undefined);
         if (camposRecibidos.length === 0) {
             return res.status(400).json({ error: 'No se proporcionaron campos para actualizar' });
@@ -142,11 +168,27 @@ router.patch('/:id', authMiddleware, adminOnly, (req, res) => {
             }
         }
 
+        // Validar codigo_barras duplicado
+        if (codigo_barras !== undefined && codigo_barras !== null && codigo_barras.trim() !== '') {
+            const barrasDuplicado = db.prepare('SELECT id FROM productos WHERE codigo_barras = ? AND id != ?').get(codigo_barras.trim(), id);
+            if (barrasDuplicado) {
+                return res.status(409).json({ error: 'Ya existe otro producto con ese código de barras' });
+            }
+        }
+
         // Validar categoria_id
         if (categoria_id !== undefined && categoria_id !== null) {
             const categoria = db.prepare('SELECT id FROM categorias WHERE id = ? AND activo = 1').get(categoria_id);
             if (!categoria) {
                 return res.status(400).json({ error: 'La categoría especificada no existe o no está activa' });
+            }
+        }
+
+        // Validar proveedor_id
+        if (proveedor_id !== undefined && proveedor_id !== null) {
+            const proveedor = db.prepare('SELECT id FROM proveedores WHERE id = ? AND activo = 1').get(proveedor_id);
+            if (!proveedor) {
+                return res.status(400).json({ error: 'El proveedor especificado no existe o no está activo' });
             }
         }
 
@@ -158,9 +200,21 @@ router.patch('/:id', authMiddleware, adminOnly, (req, res) => {
             updates.push('codigo = ?');
             values.push((codigo && codigo.trim() !== '') ? codigo.trim() : null);
         }
+        if (codigo_barras !== undefined) {
+            updates.push('codigo_barras = ?');
+            values.push((codigo_barras && codigo_barras.trim() !== '') ? codigo_barras.trim() : null);
+        }
         if (nombre !== undefined) {
             updates.push('nombre = ?');
             values.push(nombre.trim());
+        }
+        if (marca !== undefined) {
+            updates.push('marca = ?');
+            values.push((marca && marca.trim() !== '') ? marca.trim() : null);
+        }
+        if (volumen !== undefined) {
+            updates.push('volumen = ?');
+            values.push((volumen && volumen.trim() !== '') ? volumen.trim() : null);
         }
         if (descripcion !== undefined) {
             updates.push('descripcion = ?');
@@ -169,6 +223,10 @@ router.patch('/:id', authMiddleware, adminOnly, (req, res) => {
         if (categoria_id !== undefined) {
             updates.push('categoria_id = ?');
             values.push(categoria_id || null);
+        }
+        if (proveedor_id !== undefined) {
+            updates.push('proveedor_id = ?');
+            values.push(proveedor_id || null);
         }
         if (unidad_medida !== undefined) {
             updates.push('unidad_medida = ?');

@@ -49,9 +49,13 @@ CREATE TABLE IF NOT EXISTS proveedores (
 CREATE TABLE IF NOT EXISTS productos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     codigo TEXT UNIQUE,
+    codigo_barras TEXT,
     nombre TEXT NOT NULL,
+    marca TEXT,
+    volumen TEXT,
     descripcion TEXT,
     categoria_id INTEGER REFERENCES categorias(id),
+    proveedor_id INTEGER REFERENCES proveedores(id),
     unidad_medida TEXT NOT NULL DEFAULT 'unidad',
     stock_actual REAL NOT NULL DEFAULT 0,
     stock_minimo REAL NOT NULL DEFAULT 0,
@@ -106,6 +110,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
 -- Índices para rendimiento
 CREATE INDEX IF NOT EXISTS idx_productos_activo ON productos(activo);
 CREATE INDEX IF NOT EXISTS idx_productos_categoria ON productos(categoria_id);
+CREATE INDEX IF NOT EXISTS idx_productos_codigo_barras ON productos(codigo_barras);
 CREATE INDEX IF NOT EXISTS idx_movimientos_producto ON movimientos(producto_id);
 CREATE INDEX IF NOT EXISTS idx_movimientos_fecha ON movimientos(created_at);
 CREATE INDEX IF NOT EXISTS idx_movimientos_user ON movimientos(user_id);
