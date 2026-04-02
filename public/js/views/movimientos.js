@@ -1,8 +1,54 @@
-// Movimientos View — List + Create (no edit/delete)
+// Movimientos View — List + Create, grouped by week
 
 const Movimientos = {
     data: [],
     productos: [],
+
+    // Helper: Get Monday of a given date
+    getMonday(date) {
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        return new Date(d.setDate(diff));
+    },
+
+    // Helper: Get week key (Monday date as string)
+    getWeekKey(dateStr) {
+        const d = new Date(dateStr);
+        const monday = this.getMonday(d);
+        monday.setHours(0, 0, 0, 0);
+        return monday.toISOString().split('T')[0];
+    },
+
+    // Helper: Get week label "Semana del 24/03 al 30/03"
+    getWeekLabel(mondayStr) {
+        const monday = new Date(mondayStr + 'T00:00:00');
+        const sunday = new Date(monday);
+        sunday.setDate(sunday.getDate() + 6);
+        const format = (d) => d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+        return `Semana del ${format(monday)} al ${format(sunday)}`;
+    },
+
+    // Helper: Group movements by week
+    groupByWeek(movements) {
+        const groups = {};
+        movements.forEach(m => {
+            const key = this.getWeekKey(m.created_at);
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(m);
+        });
+        // Sort weeks descending (newest first)
+        return Object.keys(groups)
+            .sort((a, b) => b.localeCompare(a))
+            .map(key => ({ key, label: this.getWeekLabel(key), movements: groups[key] }));
+    },
+
+    // Helper: Get available weeks for dropdown
+    getAvailableWeeks() {
+        const weeks = new Set();
+        this.data.forEach(m => weeks.add(this.getWeekKey(m.created_at)));
+        return Array.from(weeks).sort((a, b) => b.localeCompare(a));
+    },
 
     render() {
         return `
@@ -16,9 +62,14 @@ const Movimientos = {
                         <h2 class="card-title">Historial de movimientos</h2>
                         <button class="btn btn-success" onclick="Movimientos.openModal()">+ Nuevo movimiento</button>
                     </div>
-                    <div id="movimientos-filters" class="form-row" style="margin-bottom:16px">
+                    <div id="movimientos-filters" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
                         <div class="form-group" style="margin-bottom:0">
-                            <select id="filtro-tipo" class="form-select" onchange="Movimientos.load()">
+                            <select id="filtro-semana" class="form-select" onchange="Movimientos.renderTable()">
+                                <option value="">Todas las semanas</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0">
+                            <select id="filtro-tipo" class="form-select" onchange="Movimientos.renderTable()">
                                 <option value="">Todos los tipos</option>
                                 <option value="ENTRADA">Entrada</option>
                                 <option value="SALIDA">Salida</option>
@@ -26,7 +77,7 @@ const Movimientos = {
                             </select>
                         </div>
                         <div class="form-group" style="margin-bottom:0">
-                            <select id="filtro-producto" class="form-select" onchange="Movimientos.load()">
+                            <select id="filtro-producto" class="form-select" onchange="Movimientos.renderTable()">
                                 <option value="">Todos los productos</option>
                             </select>
                         </div>
@@ -44,28 +95,37 @@ const Movimientos = {
         try {
             const prodData = await api.getProductos();
             this.productos = prodData.productos;
-            this.populateFilters();
+            this.populateProductFilter();
         } catch (e) { /* ignore */ }
         await this.load();
     },
 
-    populateFilters() {
+    populateProductFilter() {
         const select = document.getElementById('filtro-producto');
         if (!select) return;
         select.innerHTML = '<option value="">Todos los productos</option>' +
             this.productos.map(p => `<option value="${p.id}">${p.nombre} (${p.codigo || 'sin código'})</option>`).join('');
     },
 
+    populateWeekFilter() {
+        const select = document.getElementById('filtro-semana');
+        if (!select) return;
+        const weeks = this.getAvailableWeeks();
+        select.innerHTML = '<option value="">Todas las semanas</option>' +
+            weeks.map(w => `<option value="${w}">${this.getWeekLabel(w)}</option>`).join('');
+
+        // Default to current week
+        const currentWeek = this.getWeekKey(new Date().toISOString());
+        if (weeks.includes(currentWeek)) {
+            select.value = currentWeek;
+        }
+    },
+
     async load() {
         try {
-            const params = {};
-            const tipo = document.getElementById('filtro-tipo')?.value;
-            const producto = document.getElementById('filtro-producto')?.value;
-            if (tipo) params.tipo = tipo;
-            if (producto) params.producto_id = producto;
-
-            const data = await api.getMovimientos(params);
+            const data = await api.getMovimientos({ limit: 500 });
             this.data = data.movimientos;
+            this.populateWeekFilter();
             this.renderTable();
         } catch (error) {
             document.getElementById('movimientos-table').innerHTML = `
@@ -74,19 +134,66 @@ const Movimientos = {
         }
     },
 
+    getFilteredMovements() {
+        const semanaFiltro = document.getElementById('filtro-semana')?.value;
+        const tipoFiltro = document.getElementById('filtro-tipo')?.value;
+        const productoFiltro = document.getElementById('filtro-producto')?.value;
+
+        return this.data.filter(m => {
+            if (semanaFiltro && this.getWeekKey(m.created_at) !== semanaFiltro) return false;
+            if (tipoFiltro && m.tipo !== tipoFiltro) return false;
+            if (productoFiltro && m.producto_id !== parseInt(productoFiltro)) return false;
+            return true;
+        });
+    },
+
     renderTable() {
-        if (this.data.length === 0) {
+        const filtered = this.getFilteredMovements();
+
+        if (filtered.length === 0) {
             document.getElementById('movimientos-table').innerHTML = `
                 <div class="empty-state">
                     <div class="empty-state-icon">&#128203;</div>
-                    <p>No hay movimientos registrados</p>
+                    <p>No hay movimientos para los filtros seleccionados</p>
                 </div>
             `;
             return;
         }
 
-        document.getElementById('movimientos-table').innerHTML = `
-            <table>
+        // If filtering by specific week, show flat table
+        const semanaFiltro = document.getElementById('filtro-semana')?.value;
+        if (semanaFiltro) {
+            document.getElementById('movimientos-table').innerHTML = this.renderFlatTable(filtered);
+            return;
+        }
+
+        // Otherwise, group by week
+        const groups = this.groupByWeek(filtered);
+        let html = '';
+
+        groups.forEach(group => {
+            const entradas = group.movements.filter(m => m.tipo === 'ENTRADA').length;
+            const salidas = group.movements.filter(m => m.tipo === 'SALIDA').length;
+
+            html += `
+                <div style="background:var(--gray-100);padding:12px 16px;border-radius:var(--radius);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+                    <strong style="font-size:0.95rem">&#128197; ${escapeHtml(group.label)}</strong>
+                    <div style="display:flex;gap:8px">
+                        <span class="badge badge-success">${entradas} entradas</span>
+                        <span class="badge badge-danger">${salidas} salidas</span>
+                        <span class="badge badge-info">${group.movements.length} total</span>
+                    </div>
+                </div>
+                ${this.renderFlatTable(group.movements)}
+            `;
+        });
+
+        document.getElementById('movimientos-table').innerHTML = html;
+    },
+
+    renderFlatTable(movements) {
+        return `
+            <table style="margin-bottom:24px">
                 <thead>
                     <tr>
                         <th>Fecha</th>
@@ -99,7 +206,7 @@ const Movimientos = {
                     </tr>
                 </thead>
                 <tbody>
-                    ${this.data.map(m => {
+                    ${movements.map(m => {
                         const badgeClass = m.tipo === 'ENTRADA' ? 'badge-success' : m.tipo === 'SALIDA' ? 'badge-danger' : 'badge-info';
                         const sign = m.tipo === 'ENTRADA' ? '+' : m.tipo === 'SALIDA' ? '-' : '=';
                         return `
@@ -276,7 +383,7 @@ const Movimientos = {
             // Reload both movimientos and productos (for updated stock)
             const prodData = await api.getProductos();
             this.productos = prodData.productos;
-            this.populateFilters();
+            this.populateProductFilter();
             await this.load();
         } catch (error) {
             errorDiv.textContent = error.message;
