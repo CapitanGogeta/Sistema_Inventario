@@ -51,6 +51,7 @@ const Movimientos = {
     },
 
     render() {
+        const isAdminUser = isAdmin();
         return `
             <div class="container">
                 <div class="page-header">
@@ -60,7 +61,7 @@ const Movimientos = {
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Historial de movimientos</h2>
-                        <button class="btn btn-success" onclick="Movimientos.openModal()">+ Nuevo movimiento</button>
+                        ${isAdminUser ? '<button class="btn btn-success" onclick="Movimientos.openModal()">+ Nuevo movimiento</button>' : ''}
                     </div>
                     <div id="movimientos-filters" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
                         <div class="form-group" style="margin-bottom:0">
@@ -191,7 +192,8 @@ const Movimientos = {
         document.getElementById('movimientos-table').innerHTML = html;
     },
 
-    renderFlatTable(movements) {
+    renderFlatTable(movements, showUser = true) {
+        const isAdminUser = isAdmin();
         return `
             <table style="margin-bottom:24px">
                 <thead>
@@ -202,7 +204,7 @@ const Movimientos = {
                         <th>Cantidad</th>
                         <th>Motivo</th>
                         <th>Notas</th>
-                        <th>Usuario</th>
+                        ${isAdminUser ? '<th>Usuario</th>' : ''}
                     </tr>
                 </thead>
                 <tbody>
@@ -211,7 +213,7 @@ const Movimientos = {
                         const sign = m.tipo === 'ENTRADA' ? '+' : m.tipo === 'SALIDA' ? '-' : '=';
                         return `
                             <tr>
-                                <td>${new Date(m.created_at).toLocaleString('es-AR')}</td>
+                                <td>${new Date(m.created_at).toLocaleString('es-VE')}</td>
                                 <td><strong>${escapeHtml(m.producto_nombre)}</strong><br><code>${escapeHtml(m.producto_codigo)}</code></td>
                                 <td><span class="badge ${badgeClass}">${m.tipo}</span></td>
                                 <td><strong>${sign}${m.cantidad}</strong></td>
@@ -219,7 +221,7 @@ const Movimientos = {
                                 <td>
                                     ${m.notas ? `<button class="btn btn-sm btn-outline" onclick="Movimientos.openDetail(${m.id})">&#128196; Ver</button>` : '<span style="color:var(--gray-300)">-</span>'}
                                 </td>
-                                <td>${m.usuario_nombre || '-'}</td>
+                                ${isAdminUser ? `<td>${m.usuario_nombre || '-'}</td>` : ''}
                             </tr>
                         `;
                     }).join('')}

@@ -7,3 +7,12 @@ server/backups/
 *.db-journal
 *.db-wal
 *.db-shm
+nul
+# Imágenes del proyecto - exclusions
+public/img/*
+!public/img/.gitkeep
+# Logo de Maxi Licor (archivo del proyecto)
+public/img/logo.png
+public/img/favicon.ico
+# Archivos grandes del logo (opcional - excluir si hay problemas de tamaño)
+"LOGO MAXI LICOR/"

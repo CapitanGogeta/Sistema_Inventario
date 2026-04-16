@@ -6,9 +6,9 @@ const Login = {
             <div class="login-container">
                 <div class="login-card">
                     <div class="login-header">
-                        <div class="login-logo">&#128230;</div>
-                        <h1 class="login-title">Inventario Hildemar</h1>
-                        <p class="login-subtitle">Sistema de gestión de almacén</p>
+                        <img src="img/logo.png" alt="Maxi Licor" class="login-logo-img">
+                        <h1 class="login-title">Maxi Licor</h1>
+                        <p class="login-subtitle">Sistema de gestión de inventario</p>
                     </div>
                     <form id="login-form" onsubmit="Auth.handleLogin(event)">
                         <div class="form-group">

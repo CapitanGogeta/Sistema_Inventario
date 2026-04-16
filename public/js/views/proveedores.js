@@ -4,6 +4,7 @@ const Proveedores = {
     data: [],
 
     render() {
+        const isAdminUser = isAdmin();
         return `
             <div class="container">
                 <div class="page-header">
@@ -13,7 +14,7 @@ const Proveedores = {
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Lista de proveedores</h2>
-                        <button class="btn btn-primary" onclick="Proveedores.openModal()">+ Nuevo proveedor</button>
+                        ${isAdminUser ? '<button class="btn btn-primary" onclick="Proveedores.openModal()">+ Nuevo proveedor</button>' : ''}
                     </div>
                     <div class="table-container" id="proveedores-table">
                         <div class="loading">Cargando...</div>
@@ -51,6 +52,7 @@ const Proveedores = {
             return;
         }
 
+        const isAdminUser = isAdmin();
         document.getElementById('proveedores-table').innerHTML = `
             <table>
                 <thead>
@@ -60,7 +62,7 @@ const Proveedores = {
                         <th>Contacto</th>
                         <th>Teléfono</th>
                         <th>Email</th>
-                        <th class="text-right">Acciones</th>
+                        ${isAdminUser ? '<th class="text-right">Acciones</th>' : ''}
                     </tr>
                 </thead>
                 <tbody>
@@ -71,12 +73,14 @@ const Proveedores = {
                             <td>${escapeHtml(p.contacto)}</td>
                             <td>${escapeHtml(p.telefono)}</td>
                             <td>${escapeHtml(p.email)}</td>
-                            <td class="text-right">
-                                <div class="actions" style="justify-content:flex-end">
-                                    <button class="btn btn-sm btn-outline" onclick="Proveedores.openModal(${p.id})">Editar</button>
-                                    <button class="btn btn-sm btn-danger" onclick="Proveedores.delete(${p.id})">Eliminar</button>
-                                </div>
-                            </td>
+                            ${isAdminUser ? `
+                                <td class="text-right">
+                                    <div class="actions" style="justify-content:flex-end">
+                                        <button class="btn btn-sm btn-outline" onclick="Proveedores.openModal(${p.id})">Editar</button>
+                                        <button class="btn btn-sm btn-danger" onclick="Proveedores.delete(${p.id})">Eliminar</button>
+                                    </div>
+                                </td>
+                            ` : ''}
                         </tr>
                     `).join('')}
                 </tbody>

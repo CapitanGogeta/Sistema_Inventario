@@ -5,6 +5,7 @@ const Facturas = {
     proveedores: [],
 
     render() {
+        const isAdminUser = isAdmin();
         return `
             <div class="container">
                 <div class="page-header">
@@ -14,7 +15,7 @@ const Facturas = {
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Facturas registradas</h2>
-                        <button class="btn btn-primary" onclick="Facturas.openModal()">+ Subir factura</button>
+                        ${isAdminUser ? '<button class="btn btn-primary" onclick="Facturas.openModal()">+ Subir factura</button>' : ''}
                     </div>
                     <div id="facturas-filters" class="form-row" style="margin-bottom:16px">
                         <div class="form-group" style="margin-bottom:0">
@@ -79,9 +80,17 @@ const Facturas = {
             return;
         }
 
+        const isAdminUser = isAdmin();
         // Calculate total
         const total = this.data.reduce((sum, f) => sum + (f.monto_total || 0), 0);
-        document.getElementById('facturas-total').textContent = `Total: $${total.toLocaleString('es-AR')}`;
+        const tasa = App.tasaDolar.tasa || 0;
+        const totalBs = total * tasa;
+        document.getElementById('facturas-total').innerHTML = `
+            <span class="price-cell" style="flex-direction:row;gap:8px">
+                <span>Total: $${total.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                <span class="price-bs">/ ${totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs</span>
+            </span>
+        `;
 
         document.getElementById('facturas-table').innerHTML = `
             <table>
@@ -92,29 +101,41 @@ const Facturas = {
                         <th>Proveedor</th>
                         <th>Monto</th>
                         <th>Archivo</th>
-                        <th>Subido por</th>
-                        <th class="text-right">Acciones</th>
+                        ${isAdminUser ? '<th>Subido por</th>' : ''}
+                        ${isAdminUser ? '<th class="text-right">Acciones</th>' : ''}
                     </tr>
                 </thead>
                 <tbody>
-                    ${this.data.map(f => `
-                        <tr>
-                            <td>${f.fecha_factura || new Date(f.created_at).toLocaleDateString('es-AR')}</td>
-                            <td><strong>${escapeHtml(f.numero_factura)}</strong></td>
-                            <td>${escapeHtml(f.proveedor_nombre)}</td>
-                            <td>${f.monto_total ? '$' + f.monto_total.toLocaleString('es-AR') : '-'}</td>
-                            <td>
-                                <span class="badge badge-info">${f.archivo_tipo}</span>
-                            </td>
-                            <td>${f.usuario_nombre || '-'}</td>
-                            <td class="text-right">
-                                <div class="actions" style="justify-content:flex-end">
-                                    <button class="btn btn-sm btn-outline" onclick="Facturas.view(${f.id})">Ver</button>
-                                    <button class="btn btn-sm btn-primary" onclick="Facturas.download(${f.id}, '${f.archivo_nombre_original}')">Descargar</button>
-                                </div>
-                            </td>
-                        </tr>
-                    `).join('')}
+                    ${this.data.map(f => {
+                        const bs = (f.monto_total || 0) * tasa;
+                        return `
+                            <tr>
+                                <td>${f.fecha_factura || new Date(f.created_at).toLocaleDateString('es-VE')}</td>
+                                <td><strong>${escapeHtml(f.numero_factura)}</strong></td>
+                                <td>${escapeHtml(f.proveedor_nombre)}</td>
+                                <td>
+                                    ${f.monto_total ? `
+                                        <div class="price-cell">
+                                            <span class="price-usd">$${f.monto_total.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                                            <span class="price-bs">${bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs</span>
+                                        </div>
+                                    ` : '-'}
+                                </td>
+                                <td>
+                                    <span class="badge badge-info">${f.archivo_tipo}</span>
+                                </td>
+                                ${isAdminUser ? `<td>${f.usuario_nombre || '-'}</td>` : ''}
+                                ${isAdminUser ? `
+                                    <td class="text-right">
+                                        <div class="actions" style="justify-content:flex-end">
+                                            <button class="btn btn-sm btn-outline" onclick="Facturas.view(${f.id})">Ver</button>
+                                            <button class="btn btn-sm btn-primary" onclick="Facturas.download(${f.id}, '${f.archivo_nombre_original}')">Descargar</button>
+                                        </div>
+                                    </td>
+                                ` : ''}
+                            </tr>
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         `;

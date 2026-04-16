@@ -31,6 +31,34 @@ app.use('/api/productos', require('./routes/productos'));
 app.use('/api/movimientos', require('./routes/movimientos'));
 app.use('/api/facturas', require('./routes/facturas'));
 
+// GET /api/tasa-dolar — Obtener tasa oficial del BCV (Venezuela)
+app.get('/api/tasa-dolar', async (req, res) => {
+    try {
+        const response = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
+        
+        if (!response.ok) {
+            throw new Error('Error al obtener tasa');
+        }
+        
+        const data = await response.json();
+        
+        res.json({
+            fuente: 'BCV',
+            tasa: data.promedio || data.venta || 0,
+            fechaActualizacion: data.fechaActualizacion
+        });
+    } catch (error) {
+        // Fallback: usar tasa configurada en variable de entorno
+        console.warn('[TasaDolar] Error al obtener de API, usando fallback:', error.message);
+        const fallback = parseFloat(process.env.TASA_DOLAR_FALLBACK) || 0;
+        res.json({
+            fuente: 'fallback',
+            tasa: fallback,
+            fechaActualizacion: null
+        });
+    }
+});
+
 app.get('/db-test', authMiddleware, (req, res) => {
     try {
         const db = require('./database/db');

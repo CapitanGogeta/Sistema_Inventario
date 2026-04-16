@@ -1,15 +1,17 @@
 // App — Main application with SPA router
 
+// Estado global para la tasa del dólar
 const App = {
+    tasaDolar: { tasa: 0, fuente: '', fecha: null },
     // Route definitions
     routes: {
         '/login': { view: Login, auth: false },
         '/dashboard': { view: Dashboard, auth: true },
-        '/categorias': { view: Categorias, auth: true, admin: true },
-        '/proveedores': { view: Proveedores, auth: true, admin: true },
-        '/productos': { view: Productos, auth: true, admin: true },
-        '/movimientos': { view: Movimientos, auth: true, admin: true },
-        '/facturas': { view: Facturas, auth: true, admin: true },
+        '/categorias': { view: Categorias, auth: true },
+        '/proveedores': { view: Proveedores, auth: true },
+        '/productos': { view: Productos, auth: true },
+        '/movimientos': { view: Movimientos, auth: true },
+        '/facturas': { view: Facturas, auth: true },
         '/usuarios': { view: Usuarios, auth: true, admin: true }
     },
 
@@ -82,6 +84,11 @@ const App = {
                 const user = getUser();
                 userInfo.textContent = user ? user.nombre : '';
             }
+            // Ocultar enlace a Usuarios si no es admin
+            const usersLink = document.querySelector('a[href="#/usuarios"]');
+            if (usersLink) {
+                usersLink.style.display = isAdmin() ? '' : 'none';
+            }
         } else {
             if (nav) nav.classList.add('hidden');
         }
@@ -95,8 +102,54 @@ const App = {
                 link.classList.add('active');
             }
         });
+    },
+
+    // Cargar tasa del dólar desde el servidor
+    async loadTasaDolar() {
+        try {
+            const response = await fetch('/api/tasa-dolar');
+            if (response.ok) {
+                const data = await response.json();
+                this.tasaDolar = { tasa: data.tasa, fuente: data.fuente, fecha: data.fechaActualizacion };
+                this.updateTasaDisplay();
+            }
+        } catch (error) {
+            console.warn('[App] Error al cargar tasa del dólar:', error);
+        }
+    },
+
+    // Convertir precio de USD a Bs
+    aBs(usd) {
+        if (!usd || usd === 0 || this.tasaDolar.tasa === 0) return 0;
+        return usd * this.tasaDolar.tasa;
+    },
+
+    // Formatear monto con ambas monedas
+    formatMonto(usd) {
+        const bs = this.aBs(usd);
+        return `$${usd.toLocaleString('es-VE', { minimumFractionDigits: 2 })} / ${bs.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs`;
+    },
+
+    // Actualizar display de la tasa en el navbar
+    updateTasaDisplay() {
+        const tasaDisplay = document.getElementById('tasa-display');
+        if (tasaDisplay) {
+            if (this.tasaDolar.tasa > 0) {
+                tasaDisplay.textContent = `$${this.tasaDolar.tasa.toLocaleString('es-VE')} Bs/USD`;
+                tasaDisplay.title = `Fuente: ${this.tasaDolar.fuente}${this.tasaDolar.fecha ? ' - Actualizado: ' + new Date(this.tasaDolar.fecha).toLocaleDateString('es-VE') : ''}`;
+            } else {
+                tasaDisplay.textContent = 'Tasa no disponible';
+                tasaDisplay.title = 'No se pudo obtener la tasa del dólar';
+            }
+        }
     }
 };
 
 // Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', () => App.init());
+document.addEventListener('DOMContentLoaded', () => {
+    App.init();
+    // Cargar tasa del dólar si el usuario está logueado
+    if (isLoggedIn()) {
+        App.loadTasaDolar();
+    }
+});

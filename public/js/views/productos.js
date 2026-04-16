@@ -6,6 +6,7 @@ const Productos = {
     proveedores: [],
 
     render() {
+        const isAdminUser = isAdmin();
         return `
             <div class="container">
                 <div class="page-header">
@@ -15,7 +16,7 @@ const Productos = {
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Lista de productos</h2>
-                        <button class="btn btn-primary" onclick="Productos.openModal()">+ Nuevo producto</button>
+                        ${isAdminUser ? '<button class="btn btn-primary" onclick="Productos.openModal()">+ Nuevo producto</button>' : ''}
                     </div>
                     <div class="table-container" id="productos-table">
                         <div class="loading">Cargando...</div>
@@ -59,6 +60,8 @@ const Productos = {
             return;
         }
 
+        const isAdminUser = isAdmin();
+        const tasa = App.tasaDolar.tasa || 0;
         document.getElementById('productos-table').innerHTML = `
             <table>
                 <thead>
@@ -71,14 +74,13 @@ const Productos = {
                         <th>Stock</th>
                         <th>P. Compra</th>
                         <th>P. Venta</th>
-                        <th>Monto Total</th>
-                        <th class="text-right">Acciones</th>
+                        <th>Valor Total</th>
+                        ${isAdminUser ? '<th class="text-right">Acciones</th>' : ''}
                     </tr>
                 </thead>
                 <tbody>
                     ${this.data.map(p => {
                         const stockClass = p.stock_actual < p.stock_minimo ? 'badge-danger' : 'badge-success';
-                        const nombreCompleto = [p.nombre, escapeHtml(p.marca), escapeHtml(p.volumen)].filter(Boolean).join(' ');
                         return `
                             <tr>
                                 <td><code>${escapeHtml(p.codigo) || escapeHtml(p.codigo_barras) || '-'}</code></td>
@@ -87,15 +89,32 @@ const Productos = {
                                 <td>${escapeHtml(p.volumen) || '-'}</td>
                                 <td>${escapeHtml(p.categoria_nombre)}</td>
                                 <td><span class="badge ${stockClass}">${p.stock_actual}</span></td>
-                                <td>$${p.precio_compra}</td>
-                                <td>$${p.precio_venta}</td>
-                                <td><strong>$${(p.stock_actual * p.precio_compra).toLocaleString('es-AR')}</strong></td>
-                                <td class="text-right">
-                                    <div class="actions" style="justify-content:flex-end">
-                                        <button class="btn btn-sm btn-outline" onclick="Productos.openModal(${p.id})">Editar</button>
-                                        <button class="btn btn-sm btn-danger" onclick="Productos.delete(${p.id})">Eliminar</button>
+                                <td>
+                                    <div class="price-cell">
+                                        <span class="price-usd">$${p.precio_compra.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                                        <span class="price-bs">${(p.precio_compra * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs</span>
                                     </div>
                                 </td>
+                                <td>
+                                    <div class="price-cell">
+                                        <span class="price-usd">$${p.precio_venta.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                                        <span class="price-bs">${(p.precio_venta * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="price-cell">
+                                        <span class="price-usd">$${(p.stock_actual * p.precio_compra).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span>
+                                        <span class="price-bs">${(p.stock_actual * p.precio_compra * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs</span>
+                                    </div>
+                                </td>
+                                ${isAdminUser ? `
+                                    <td class="text-right">
+                                        <div class="actions" style="justify-content:flex-end">
+                                            <button class="btn btn-sm btn-outline" onclick="Productos.openModal(${p.id})">Editar</button>
+                                            <button class="btn btn-sm btn-danger" onclick="Productos.delete(${p.id})">Eliminar</button>
+                                        </div>
+                                    </td>
+                                ` : ''}
                             </tr>
                         `;
                     }).join('')}

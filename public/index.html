@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventario Hildemar</title>
+    <title>Maxi Licor - Sistema de Inventario</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" type="image/png" href="img/logo.png">
 </head>
 <body>
     <!-- Navigation (hidden by default, shown when logged in) -->
     <nav id="main-nav" class="hidden">
         <div class="nav-brand">
-            <span class="nav-logo">&#128230;</span>
-            <span class="nav-title">Hildemar</span>
+            <img src="img/logo.png" alt="Maxi Licor" class="nav-logo-img">
+            <span class="nav-title">Maxi Licor</span>
         </div>
         <div class="nav-links">
             <a href="#/dashboard" class="nav-link">Dashboard</a>
@@ -23,6 +24,7 @@
             <a href="#/usuarios" class="nav-link">Usuarios</a>
         </div>
         <div class="nav-user">
+            <span id="tasa-display" class="tasa-display" title="Tasa del dólar"></span>
             <span id="user-info"></span>
             <button onclick="Auth.logout()" class="btn btn-sm btn-outline">Salir</button>
         </div>

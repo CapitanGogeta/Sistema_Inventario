@@ -4,6 +4,7 @@ const Categorias = {
     data: [],
 
     render() {
+        const isAdminUser = isAdmin();
         return `
             <div class="container">
                 <div class="page-header">
@@ -13,7 +14,7 @@ const Categorias = {
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Lista de categorías</h2>
-                        <button class="btn btn-primary" onclick="Categorias.openModal()">+ Nueva categoría</button>
+                        ${isAdminUser ? '<button class="btn btn-primary" onclick="Categorias.openModal()">+ Nueva categoría</button>' : ''}
                     </div>
                     <div class="table-container" id="categorias-table">
                         <div class="loading">Cargando...</div>
@@ -51,6 +52,7 @@ const Categorias = {
             return;
         }
 
+        const isAdminUser = isAdmin();
         document.getElementById('categorias-table').innerHTML = `
             <table>
                 <thead>
@@ -58,7 +60,7 @@ const Categorias = {
                         <th>ID</th>
                         <th>Nombre</th>
                         <th>Descripción</th>
-                        <th class="text-right">Acciones</th>
+                        ${isAdminUser ? '<th class="text-right">Acciones</th>' : ''}
                     </tr>
                 </thead>
                 <tbody>
@@ -67,12 +69,14 @@ const Categorias = {
                             <td>${c.id}</td>
                             <td><strong>${escapeHtml(c.nombre)}</strong></td>
                             <td>${escapeHtml(c.descripcion)}</td>
-                            <td class="text-right">
-                                <div class="actions" style="justify-content:flex-end">
-                                    <button class="btn btn-sm btn-outline" onclick="Categorias.openModal(${c.id})">Editar</button>
-                                    <button class="btn btn-sm btn-danger" onclick="Categorias.delete(${c.id})">Eliminar</button>
-                                </div>
-                            </td>
+                            ${isAdminUser ? `
+                                <td class="text-right">
+                                    <div class="actions" style="justify-content:flex-end">
+                                        <button class="btn btn-sm btn-outline" onclick="Categorias.openModal(${c.id})">Editar</button>
+                                        <button class="btn btn-sm btn-danger" onclick="Categorias.delete(${c.id})">Eliminar</button>
+                                    </div>
+                                </td>
+                            ` : ''}
                         </tr>
                     `).join('')}
                 </tbody>

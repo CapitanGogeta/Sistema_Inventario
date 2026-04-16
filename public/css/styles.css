@@ -1,4 +1,4 @@
-/* Inventario Hildemar — Styles */
+/* Maxi Licor - Sistema de Inventario */
 
 /* ========== RESET & BASE ========== */
 *, *::before, *::after {
@@ -8,8 +8,9 @@
 }
 
 :root {
-    --primary: #2563eb;
-    --primary-hover: #1d4ed8;
+    --primary: #c41e3a;       /* Rojo Maxi Licor */
+    --primary-hover: #a01830;
+    --primary-light: #fce8ea;
     --success: #16a34a;
     --danger: #dc2626;
     --warning: #f59e0b;
@@ -22,6 +23,7 @@
     --gray-900: #111827;
     --radius: 8px;
     --shadow: 0 1px 3px rgba(0,0,0,0.1);
+    --gradient: linear-gradient(135deg, #c41e3a 0%, #8b1528 100%);
 }
 
 body {
@@ -52,6 +54,12 @@ body {
     font-weight: 700;
     font-size: 1.2rem;
     color: var(--primary);
+}
+
+.nav-logo-img {
+    height: 36px;
+    width: auto;
+    object-fit: contain;
 }
 
 .nav-logo {
@@ -86,6 +94,15 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
+}
+
+.tasa-display {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    background: var(--gray-100);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600;
 }
 
 #user-info {
@@ -314,6 +331,16 @@ tr:hover {
     color: var(--primary);
 }
 
+.stat-subvalue {
+    font-size: 0.85rem;
+    color: var(--gray-500);
+    margin-top: 4px;
+}
+
+.stat-card.stat-wide {
+    grid-column: span 2;
+}
+
 .stat-label {
     font-size: 0.85rem;
     color: var(--gray-500);
@@ -394,7 +421,7 @@ tr:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--gradient);
 }
 
 .login-card {
@@ -403,12 +430,18 @@ tr:hover {
     padding: 40px;
     width: 100%;
     max-width: 400px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
 }
 
 .login-header {
     text-align: center;
     margin-bottom: 32px;
+}
+
+.login-logo-img {
+    width: 180px;
+    height: auto;
+    margin-bottom: 16px;
 }
 
 .login-logo {
@@ -417,13 +450,15 @@ tr:hover {
 }
 
 .login-title {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     font-weight: 700;
-    color: var(--gray-900);
+    color: var(--primary);
+    margin-bottom: 4px;
 }
 
 .login-subtitle {
     color: var(--gray-500);
+    font-size: 0.9rem;
 }
 
 /* ========== EMPTY STATE ========== */
@@ -439,6 +474,22 @@ tr:hover {
 }
 
 /* ========== ACTIONS CELL ========== */
+.price-cell {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.85rem;
+}
+
+.price-usd {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.price-bs {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
 .actions {
     display: flex;
     gap: 4px;

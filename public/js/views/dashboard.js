@@ -36,6 +36,11 @@ const Dashboard = {
             // Calculate stock total and low stock items
             const totalStock = productos.productos.reduce((sum, p) => sum + (p.stock_actual || 0), 0);
             const lowStock = productos.productos.filter(p => p.stock_actual < p.stock_minimo).length;
+            
+            // Calculate total value in USD and Bs
+            const tasa = App.tasaDolar.tasa || 0;
+            const totalValorUSD = productos.productos.reduce((sum, p) => sum + ((p.stock_actual || 0) * (p.precio_compra || 0)), 0);
+            const totalValorBs = totalValorUSD * tasa;
 
             // Render stats
             document.getElementById('dashboard-stats').innerHTML = `
@@ -54,6 +59,11 @@ const Dashboard = {
                 <div class="stat-card">
                     <div class="stat-value">${lowStock}</div>
                     <div class="stat-label">Stock bajo</div>
+                </div>
+                <div class="stat-card stat-wide">
+                    <div class="stat-value">$${totalValorUSD.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</div>
+                    <div class="stat-label">Valor inventario (USD)</div>
+                    <div class="stat-subvalue">${totalValorBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs</div>
                 </div>
             `;
 

@@ -96,7 +96,8 @@ router.get('/:id', authMiddleware, (req, res) => {
 });
 
 // POST /api/movimientos — Crear movimiento y actualizar stock
-router.post('/', authMiddleware, adminOnly, (req, res) => {
+// Permitido para admin y empleados (cualquier usuario autenticado)
+router.post('/', authMiddleware, (req, res) => {
     try {
         const { producto_id, tipo, cantidad, motivo, proveedor_id, notas } = req.body;
 
