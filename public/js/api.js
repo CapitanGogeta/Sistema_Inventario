@@ -68,10 +68,15 @@ async function apiFetch(endpoint, options = {}) {
         headers['Content-Type'] = 'application/json';
     }
 
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-        ...options,
-        headers
-    });
+    let response;
+    try {
+        response = await fetch(`${API_BASE}${endpoint}`, {
+            ...options,
+            headers
+        });
+    } catch (e) {
+        throw new Error('Error de red: El servidor está caído o no hay conexión a internet.');
+    }
 
     // Try to parse JSON, fallback to error message
     let data;
@@ -159,5 +164,11 @@ const api = {
     updateUser: (id, data) =>
         apiFetch(`/auth/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     deleteUser: (id) =>
-        apiFetch(`/auth/users/${id}`, { method: 'DELETE' })
+        apiFetch(`/auth/users/${id}`, { method: 'DELETE' }),
+
+    // Reportes
+    getReporteCierre: (params = {}) => {
+        const query = new URLSearchParams(params).toString();
+        return apiFetch(`/reportes/cierre${query ? '?' + query : ''}`);
+    }
 };

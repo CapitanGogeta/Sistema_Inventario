@@ -57,10 +57,12 @@ CREATE TABLE IF NOT EXISTS productos (
     categoria_id INTEGER REFERENCES categorias(id),
     proveedor_id INTEGER REFERENCES proveedores(id),
     unidad_medida TEXT NOT NULL DEFAULT 'unidad',
+    unidades_por_caja INTEGER NOT NULL DEFAULT 1,
     stock_actual REAL NOT NULL DEFAULT 0,
     stock_minimo REAL NOT NULL DEFAULT 0,
     precio_compra REAL NOT NULL DEFAULT 0,
     precio_venta REAL NOT NULL DEFAULT 0,
+    precio_venta_detal REAL NOT NULL DEFAULT 0,
     activo INTEGER NOT NULL DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -107,7 +109,44 @@ CREATE TABLE IF NOT EXISTS audit_log (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Clientes (Deudores)
+CREATE TABLE IF NOT EXISTS clientes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    telefono TEXT,
+    saldo_deuda REAL NOT NULL DEFAULT 0,
+    activo INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Ventas (Tickets)
+CREATE TABLE IF NOT EXISTS ventas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_id INTEGER REFERENCES clientes(id),
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    tipo_venta TEXT NOT NULL, -- 'NORMAL', 'FIADO', 'DUENO', 'APOYO'
+    metodo_pago TEXT, -- 'EFECTIVO', 'TARJETA', 'TRANSFERENCIA', 'PAGO_MOVIL'
+    subtotal REAL NOT NULL,
+    descuento REAL NOT NULL DEFAULT 0,
+    recargo REAL NOT NULL DEFAULT 0,
+    total REAL NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Detalles de Venta
+CREATE TABLE IF NOT EXISTS ventas_detalles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    venta_id INTEGER NOT NULL REFERENCES ventas(id),
+    producto_id INTEGER NOT NULL REFERENCES productos(id),
+    cantidad REAL NOT NULL,
+    tipo_unidad TEXT DEFAULT 'unidad',
+    precio_unitario REAL NOT NULL
+);
+
 -- Índices para rendimiento
+CREATE INDEX IF NOT EXISTS idx_ventas_fecha ON ventas(created_at);
+CREATE INDEX IF NOT EXISTS idx_ventas_cliente ON ventas(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_productos_activo ON productos(activo);
 CREATE INDEX IF NOT EXISTS idx_productos_categoria ON productos(categoria_id);
 CREATE INDEX IF NOT EXISTS idx_productos_codigo_barras ON productos(codigo_barras);

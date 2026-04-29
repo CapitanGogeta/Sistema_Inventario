@@ -155,9 +155,19 @@ const Facturas = {
                     </div>
                     <form id="factura-form" onsubmit="Facturas.save(event)">
                         <div class="form-group">
-                            <label class="form-label">Archivo *</label>
-                            <input type="file" id="fac-archivo" class="form-input" accept=".jpg,.jpeg,.png,.webp,.pdf" required>
-                            <div class="form-label mt-2" style="color:var(--gray-500);font-size:0.8rem">JPEG, PNG, WebP o PDF. Máximo 10 MB.</div>
+                            <label class="form-label">Archivo de la Factura *</label>
+                            <div class="file-upload-wrapper">
+                                <label for="fac-archivo" class="file-upload-label">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 12px; color: var(--primary);">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    <span id="file-name-display" style="font-weight: 500; color: var(--text-main); font-size: 1rem;">Haz clic para seleccionar o arrastra el archivo aquí</span>
+                                    <span style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">Admite JPEG, PNG, WebP o PDF. Máx 10 MB.</span>
+                                </label>
+                                <input type="file" id="fac-archivo" class="hidden-file-input" accept=".jpg,.jpeg,.png,.webp,.pdf" required onchange="document.getElementById('file-name-display').textContent = this.files[0] ? this.files[0].name : 'Haz clic para seleccionar o arrastra el archivo aquí'">
+                            </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">

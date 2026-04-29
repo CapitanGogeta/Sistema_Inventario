@@ -1,29 +1,53 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Maxi Licor - Sistema de Inventario</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="icon" type="image/png" href="img/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
     <!-- Navigation (hidden by default, shown when logged in) -->
     <nav id="main-nav" class="hidden">
         <div class="nav-brand">
+            <button id="mobile-menu-btn" class="mobile-only">☰</button>
             <img src="img/logo.png" alt="Maxi Licor" class="nav-logo-img">
-            <span class="nav-title">Maxi Licor</span>
+            <span class="nav-title"></span>
         </div>
-        <div class="nav-links">
+        <div class="nav-links" id="nav-links">
             <a href="#/dashboard" class="nav-link">Dashboard</a>
-            <a href="#/categorias" class="nav-link">Categorías</a>
-            <a href="#/proveedores" class="nav-link">Proveedores</a>
-            <a href="#/productos" class="nav-link">Productos</a>
+            <a href="#/ventas" class="nav-link">Punto de Venta</a>
             <a href="#/movimientos" class="nav-link">Movimientos</a>
-            <a href="#/facturas" class="nav-link">Facturas</a>
-            <a href="#/usuarios" class="nav-link">Usuarios</a>
+            <a href="#/reportes" class="nav-link">Cierres y Reportes</a>
+            
+            <div class="nav-dropdown" id="mgmt-dropdown">
+                <button class="nav-link dropdown-toggle" id="mgmt-toggle">
+                    <span class="icon-burger">☰</span> Gestión
+                </button>
+                <div class="dropdown-content">
+                    <a href="#/productos" class="dropdown-item">📦 Productos</a>
+                    <a href="#/facturas" class="dropdown-item">📄 Facturas</a>
+                    <a href="#/proveedores" class="dropdown-item">🤝 Proveedores</a>
+                    <a href="#/categorias" class="dropdown-item">📁 Categorías</a>
+                    <a href="#/clientes" class="dropdown-item">👥 Clientes</a>
+                    <div class="dropdown-divider" id="mgmt-divider"></div>
+                    <a href="#/usuarios" class="dropdown-item" id="users-nav-link">👤 Usuarios</a>
+                </div>
+            </div>
         </div>
         <div class="nav-user">
+            <button id="theme-toggle" class="theme-toggle-btn" title="Cambiar tema">
+                <span class="sun-icon">☀️</span>
+                <span class="moon-icon">🌙</span>
+            </button>
             <span id="tasa-display" class="tasa-display" title="Tasa del dólar"></span>
             <span id="user-info"></span>
             <button onclick="Auth.logout()" class="btn btn-sm btn-outline">Salir</button>
@@ -42,10 +66,14 @@
     <script src="js/views/dashboard.js"></script>
     <script src="js/views/categorias.js"></script>
     <script src="js/views/proveedores.js"></script>
+    <script src="js/views/clientes.js"></script>
+    <script src="js/views/ventas.js"></script>
     <script src="js/views/productos.js"></script>
     <script src="js/views/movimientos.js"></script>
     <script src="js/views/facturas.js"></script>
+    <script src="js/views/reportes.js"></script>
     <script src="js/views/usuarios.js"></script>
     <script src="js/app.js"></script>
 </body>
+
 </html>

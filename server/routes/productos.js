@@ -2,8 +2,54 @@ const express = require('express');
 const db = require('../database/db');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { registrarAuditoria } = require('../middleware/audit');
+const { exportToExcel } = require('../services/excel');
 
 const router = express.Router();
+
+// GET /api/productos/export/excel — Exportar productos a Excel
+router.get('/export/excel', authMiddleware, adminOnly, async (req, res) => {
+    try {
+        const productos = db.prepare(`
+            SELECT p.*, 
+                   c.nombre AS categoria_nombre,
+                   prov.nombre AS proveedor_nombre
+            FROM productos p 
+            LEFT JOIN categorias c ON p.categoria_id = c.id
+            LEFT JOIN proveedores prov ON p.proveedor_id = prov.id
+            WHERE p.activo = 1 
+            ORDER BY p.nombre ASC
+        `).all();
+
+        const columns = [
+            { header: 'CÓDIGO / ID', key: 'codigo', width: 15 },
+            { header: 'NOMBRE DEL PRODUCTO', key: 'nombre', width: 40 },
+            { header: 'CATEGORÍA', key: 'categoria', width: 25 },
+            { header: 'PROVEEDOR', key: 'proveedor', width: 25 },
+            { header: 'STOCK ACTUAL', key: 'stock_actual', width: 15 },
+            { header: 'STOCK MÍNIMO', key: 'stock_minimo', width: 15 },
+            { header: 'COSTO ($)', key: 'costo', width: 15 },
+            { header: 'PRECIO ($)', key: 'precio', width: 15 },
+            { header: 'UNIDAD', key: 'unidad_medida', width: 15 }
+        ];
+
+        const rows = productos.map(p => ({
+            codigo: p.codigo || p.id,
+            nombre: p.nombre,
+            categoria: p.categoria_nombre || 'Sin Categoría',
+            proveedor: p.proveedor_nombre || 'Sin Proveedor',
+            stock_actual: p.stock_actual,
+            stock_minimo: p.stock_minimo,
+            costo: Number(p.precio_compra).toFixed(2),
+            precio: Number(p.precio_venta).toFixed(2),
+            unidad_medida: p.unidad_medida || 'unidad'
+        }));
+
+        await exportToExcel(res, columns, rows, 'Inventario', `Inventario_Productos_${new Date().toISOString().split('T')[0]}`);
+    } catch (error) {
+        console.error('[Productos Excel] Error exportando:', error);
+        if (!res.headersSent) res.status(500).json({ error: 'Error exportando Excel' });
+    }
+});
 
 // GET /api/productos — Listar productos activos
 router.get('/', authMiddleware, (req, res) => {
@@ -53,7 +99,7 @@ router.get('/:id', authMiddleware, (req, res) => {
 // POST /api/productos — Crear producto (admin)
 router.post('/', authMiddleware, adminOnly, (req, res) => {
     try {
-        const { codigo, codigo_barras, nombre, marca, volumen, descripcion, categoria_id, proveedor_id, unidad_medida, stock_minimo, precio_compra, precio_venta } = req.body;
+        const { codigo, codigo_barras, nombre, marca, volumen, descripcion, categoria_id, proveedor_id, unidad_medida, unidades_por_caja, stock_minimo, precio_compra, precio_venta, precio_venta_detal } = req.body;
 
         // Validar nombre requerido
         if (!nombre || nombre.trim() === '') {
@@ -93,8 +139,8 @@ router.post('/', authMiddleware, adminOnly, (req, res) => {
         }
 
         const stmt = db.prepare(`
-            INSERT INTO productos (codigo, codigo_barras, nombre, marca, volumen, descripcion, categoria_id, proveedor_id, unidad_medida, stock_minimo, precio_compra, precio_venta) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO productos (codigo, codigo_barras, nombre, marca, volumen, descripcion, categoria_id, proveedor_id, unidad_medida, unidades_por_caja, stock_minimo, precio_compra, precio_venta, precio_venta_detal) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         const result = stmt.run(
             (codigo && codigo.trim() !== '') ? codigo.trim() : null,
@@ -106,9 +152,11 @@ router.post('/', authMiddleware, adminOnly, (req, res) => {
             categoria_id || null,
             proveedor_id || null,
             unidad_medida || 'unidad',
+            unidades_por_caja ? parseInt(unidades_por_caja) : 1,
             stock_minimo || 0,
             precio_compra || 0,
-            precio_venta || 0
+            precio_venta || 0,
+            precio_venta_detal !== undefined ? precio_venta_detal : (precio_venta || 0)
         );
 
         registrarAuditoria(
@@ -135,7 +183,7 @@ router.post('/', authMiddleware, adminOnly, (req, res) => {
 router.patch('/:id', authMiddleware, adminOnly, (req, res) => {
     try {
         const { id } = req.params;
-        const { codigo, codigo_barras, nombre, marca, volumen, descripcion, categoria_id, proveedor_id, unidad_medida, stock_minimo, precio_compra, precio_venta, stock_actual } = req.body;
+        const { codigo, codigo_barras, nombre, marca, volumen, descripcion, categoria_id, proveedor_id, unidad_medida, unidades_por_caja, stock_minimo, precio_compra, precio_venta, precio_venta_detal, stock_actual } = req.body;
 
         // REGLA DE NEGOCIO: rechazar stock_actual explícitamente
         if (stock_actual !== undefined) {
@@ -148,8 +196,7 @@ router.patch('/:id', authMiddleware, adminOnly, (req, res) => {
             return res.status(404).json({ error: 'Producto no encontrado' });
         }
 
-        // Validar que hay campos para actualizar
-        const camposPermitidos = { codigo, codigo_barras, nombre, marca, volumen, descripcion, categoria_id, proveedor_id, unidad_medida, stock_minimo, precio_compra, precio_venta };
+        const camposPermitidos = { codigo, codigo_barras, nombre, marca, volumen, descripcion, categoria_id, proveedor_id, unidad_medida, unidades_por_caja, stock_minimo, precio_compra, precio_venta, precio_venta_detal };
         const camposRecibidos = Object.keys(camposPermitidos).filter(k => camposPermitidos[k] !== undefined);
         if (camposRecibidos.length === 0) {
             return res.status(400).json({ error: 'No se proporcionaron campos para actualizar' });
@@ -232,6 +279,10 @@ router.patch('/:id', authMiddleware, adminOnly, (req, res) => {
             updates.push('unidad_medida = ?');
             values.push(unidad_medida);
         }
+        if (unidades_por_caja !== undefined) {
+            updates.push('unidades_por_caja = ?');
+            values.push(parseInt(unidades_por_caja));
+        }
         if (stock_minimo !== undefined) {
             updates.push('stock_minimo = ?');
             values.push(stock_minimo);
@@ -243,6 +294,10 @@ router.patch('/:id', authMiddleware, adminOnly, (req, res) => {
         if (precio_venta !== undefined) {
             updates.push('precio_venta = ?');
             values.push(precio_venta);
+        }
+        if (precio_venta_detal !== undefined) {
+            updates.push('precio_venta_detal = ?');
+            values.push(precio_venta_detal);
         }
 
         updates.push('updated_at = CURRENT_TIMESTAMP');

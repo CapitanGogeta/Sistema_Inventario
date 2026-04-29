@@ -61,7 +61,10 @@ const Movimientos = {
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Historial de movimientos</h2>
-                        ${isAdminUser ? '<button class="btn btn-success" onclick="Movimientos.openModal()">+ Nuevo movimiento</button>' : ''}
+                        <div style="display: flex; gap: 8px;">
+                            ${isAdminUser ? `<button class="btn btn-outline" onclick="Movimientos.exportExcel()" style="border-color: #10b981; color: #10b981;">📊 Excel</button>` : ''}
+                            <button class="btn btn-success" onclick="Movimientos.openModal()">+ Nuevo movimiento</button>
+                        </div>
                     </div>
                     <div id="movimientos-filters" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
                         <div class="form-group" style="margin-bottom:0">
@@ -74,6 +77,7 @@ const Movimientos = {
                                 <option value="">Todos los tipos</option>
                                 <option value="ENTRADA">Entrada</option>
                                 <option value="SALIDA">Salida</option>
+                                <option value="VENTA">Venta</option>
                                 <option value="AJUSTE">Ajuste</option>
                             </select>
                         </div>
@@ -209,8 +213,8 @@ const Movimientos = {
                 </thead>
                 <tbody>
                     ${movements.map(m => {
-                        const badgeClass = m.tipo === 'ENTRADA' ? 'badge-success' : m.tipo === 'SALIDA' ? 'badge-danger' : 'badge-info';
-                        const sign = m.tipo === 'ENTRADA' ? '+' : m.tipo === 'SALIDA' ? '-' : '=';
+                        const badgeClass = m.tipo === 'ENTRADA' ? 'badge-success' : (m.tipo === 'SALIDA' || m.tipo === 'VENTA') ? 'badge-danger' : 'badge-info';
+                        const sign = m.tipo === 'ENTRADA' ? '+' : (m.tipo === 'SALIDA' || m.tipo === 'VENTA') ? '-' : '=';
                         return `
                             <tr>
                                 <td>${new Date(m.created_at).toLocaleString('es-VE')}</td>
@@ -262,10 +266,17 @@ const Movimientos = {
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Cantidad *</label>
-                                <input type="number" id="mov-cantidad" class="form-input" min="0.01" step="0.01" required>
+                            <label for="mov-cantidad">Cantidad *</label>
+                            <input type="number" id="mov-cantidad" class="form-input" min="0.01" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Unidad de Registro *</label>
+                            <div style="display:flex;gap:16px;padding-top:8px;">
+                                <label><input type="radio" name="mov-tipo-medida" value="unidad" checked> Unidades</label>
+                                <label><input type="radio" name="mov-tipo-medida" value="caja"> Cajas</label>
                             </div>
                         </div>
+                    </div>
                         <div class="form-group">
                             <label class="form-label">Motivo</label>
                             <input type="text" id="mov-motivo" class="form-input" placeholder="Ej: Compra, Venta, Inventario físico">
@@ -295,11 +306,20 @@ const Movimientos = {
 
         const prod = this.productos.find(p => p.id === parseInt(prodId));
         if (prod) {
-            let info = `Stock actual: ${prod.stock_actual}`;
-            if (tipo === 'SALIDA' && prod.stock_minimo > 0) {
-                info += ` | Mínimo: ${prod.stock_minimo}`;
+            let stockDisplay = prod.stock_actual;
+            if (prod.unidad_medida === 'caja' && prod.unidades_por_caja > 1) {
+                const cajas = Math.floor(prod.stock_actual / prod.unidades_por_caja);
+                const uds = prod.stock_actual % prod.unidades_por_caja;
+                stockDisplay = `${cajas} cajas y ${uds} uds`;
+            } else {
+                stockDisplay += ` ${prod.unidad_medida === 'caja' ? 'cajas' : 'uds'}`;
             }
-            infoDiv.textContent = info;
+
+            let info = `Stock actual: ${stockDisplay}`;
+            if (tipo === 'SALIDA' && prod.stock_minimo > 0) {
+                info += ` | Mínimo: ${prod.stock_minimo} uds`;
+            }
+            infoDiv.innerHTML = info;
         }
     },
 
@@ -369,10 +389,24 @@ const Movimientos = {
             producto_id: parseInt(document.getElementById('mov-producto').value),
             tipo: document.getElementById('mov-tipo').value,
             cantidad: parseFloat(document.getElementById('mov-cantidad').value),
+            tipo_medida: document.querySelector('input[name="mov-tipo-medida"]:checked').value,
             motivo: document.getElementById('mov-motivo').value.trim() || undefined,
             notas: document.getElementById('mov-notas').value.trim() || undefined
         };
         const errorDiv = document.getElementById('mov-error');
+
+        if (data.tipo === 'SALIDA') {
+            const prod = this.productos.find(p => p.id === data.producto_id);
+            const factor = (data.tipo_medida === 'caja') ? (prod.unidades_por_caja || 1) : 1;
+            const cantidadReal = data.cantidad * factor;
+
+            if (prod && prod.stock_actual < cantidadReal) {
+                const unit = prod.unidad_medida === 'caja' ? 'cajas' : 'uds';
+                errorDiv.textContent = `Stock insuficiente. Disponible: ${prod.stock_actual} ${unit}, solicitado: ${cantidadReal} ${unit}`;
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+        }
 
         try {
             errorDiv.classList.add('hidden');
@@ -391,5 +425,20 @@ const Movimientos = {
             errorDiv.textContent = error.message;
             errorDiv.classList.remove('hidden');
         }
+    },
+
+    exportExcel() {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        
+        // Se puede enviar también los filtros actuales si se desea:
+        const tipo = document.getElementById('filtro-tipo')?.value || '';
+        const producto = document.getElementById('filtro-producto')?.value || '';
+        
+        let url = `/api/movimientos/export/excel?token=${token}`;
+        if (tipo) url += `&tipo=${tipo}`;
+        if (producto) url += `&producto_id=${producto}`;
+        
+        window.open(url, '_blank');
     }
 };

@@ -2,11 +2,73 @@ const express = require('express');
 const db = require('../database/db');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { registrarAuditoria } = require('../middleware/audit');
+const { exportToExcel } = require('../services/excel');
 
 const router = express.Router();
 
 // Tipos de movimiento válidos
 const TIPOS_VALIDOS = ['ENTRADA', 'SALIDA', 'AJUSTE'];
+
+// GET /api/movimientos/export/excel — Exportar movimientos a Excel
+router.get('/export/excel', authMiddleware, adminOnly, async (req, res) => {
+    try {
+        const { producto_id, tipo, desde, hasta } = req.query;
+
+        let sql = `
+            SELECT m.*,
+                   p.nombre AS producto_nombre,
+                   p.codigo AS producto_codigo,
+                   u.nombre AS usuario_nombre,
+                   prov.nombre AS proveedor_nombre
+            FROM movimientos m
+            LEFT JOIN productos p ON m.producto_id = p.id
+            LEFT JOIN users u ON m.user_id = u.id
+            LEFT JOIN proveedores prov ON m.proveedor_id = prov.id
+            WHERE 1=1
+        `;
+        const params = [];
+
+        if (producto_id) { sql += ' AND m.producto_id = ?'; params.push(producto_id); }
+        if (tipo) { sql += ' AND m.tipo = ?'; params.push(tipo.toUpperCase()); }
+        if (desde) { sql += ' AND m.created_at >= ?'; params.push(desde); }
+        if (hasta) { sql += ' AND m.created_at <= ?'; params.push(hasta); }
+        
+        sql += ' ORDER BY m.created_at DESC';
+
+        const movimientos = db.prepare(sql).all(...params);
+
+        const columns = [
+            { header: 'ID', key: 'id', width: 10 },
+            { header: 'FECHA Y HORA', key: 'fecha', width: 25 },
+            { header: 'PRODUCTO', key: 'producto', width: 40 },
+            { header: 'CÓDIGO', key: 'codigo', width: 15 },
+            { header: 'TIPO', key: 'tipo', width: 15 },
+            { header: 'CANTIDAD', key: 'cantidad', width: 15 },
+            { header: 'MOTIVO', key: 'motivo', width: 30 },
+            { header: 'PROVEEDOR', key: 'proveedor', width: 25 },
+            { header: 'USUARIO', key: 'usuario', width: 20 },
+            { header: 'NOTAS', key: 'notas', width: 30 }
+        ];
+
+        const rows = movimientos.map(m => ({
+            id: m.id,
+            fecha: new Date(m.created_at).toLocaleString('es-VE'),
+            producto: m.producto_nombre || 'Producto Eliminado',
+            codigo: m.producto_codigo || 'N/A',
+            tipo: m.tipo,
+            cantidad: m.tipo === 'SALIDA' ? `-${m.cantidad}` : `+${m.cantidad}`,
+            motivo: m.motivo || 'N/A',
+            proveedor: m.proveedor_nombre || 'N/A',
+            usuario: m.usuario_nombre || 'Desconocido',
+            notas: m.notas || 'N/A'
+        }));
+
+        await exportToExcel(res, columns, rows, 'Historial', `Historial_Movimientos_${new Date().toISOString().split('T')[0]}`);
+    } catch (error) {
+        console.error('[Movimientos Excel] Error exportando:', error);
+        if (!res.headersSent) res.status(500).json({ error: 'Error exportando Excel' });
+    }
+});
 
 // GET /api/movimientos — Listar movimientos con filtros opcionales
 router.get('/', authMiddleware, (req, res) => {
@@ -99,7 +161,7 @@ router.get('/:id', authMiddleware, (req, res) => {
 // Permitido para admin y empleados (cualquier usuario autenticado)
 router.post('/', authMiddleware, (req, res) => {
     try {
-        const { producto_id, tipo, cantidad, motivo, proveedor_id, notas } = req.body;
+        const { producto_id, tipo, cantidad, tipo_medida, motivo, proveedor_id, notas } = req.body;
 
         // 1. Validar campos obligatorios
         if (!producto_id) {
@@ -119,8 +181,8 @@ router.post('/', authMiddleware, (req, res) => {
         }
 
         // 3. Validar cantidad positiva
-        const cantidadNum = parseFloat(cantidad);
-        if (isNaN(cantidadNum) || cantidadNum <= 0) {
+        const cantidadInput = parseFloat(cantidad);
+        if (isNaN(cantidadInput) || cantidadInput <= 0) {
             return res.status(400).json({ error: 'La cantidad debe ser un número positivo' });
         }
 
@@ -138,7 +200,11 @@ router.post('/', authMiddleware, (req, res) => {
             }
         }
 
-        // 6. Calcular nuevo stock y validar
+        // 6. Calcular cantidad real según el tipo de medida
+        const factor = (tipo_medida === 'caja') ? (producto.unidades_por_caja || 1) : 1;
+        const cantidadNum = cantidadInput * factor;
+
+        // 7. Calcular nuevo stock y validar
         let nuevoStock;
         if (tipoUpper === 'ENTRADA') {
             nuevoStock = producto.stock_actual + cantidadNum;
@@ -166,7 +232,7 @@ router.post('/', authMiddleware, (req, res) => {
                 motivo || null,
                 proveedor_id || null,
                 req.user.id,
-                notas || null
+                (tipo_medida === 'caja' ? `[${cantidadInput} Cajas] ${notas || ''}` : notas) || null
             );
 
             // Actualizar stock del producto

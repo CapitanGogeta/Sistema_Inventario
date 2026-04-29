@@ -117,6 +117,6 @@
 | 8 | Paginación movimientos | ✅ Resuelto |
 | 9 | Elemento inexistente | ✅ Resuelto |
 | 10 | Auditoría proveedores | ✅ Resuelto |
-| 11 | Error de red | ⏳ Pendiente (mejora futura) |
+| 11 | Error de red | ✅ Resuelto |
 
-**Última actualización:** 2026-03-28
+**Última actualización:** 2026-04-20
